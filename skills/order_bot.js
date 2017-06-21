@@ -127,7 +127,7 @@ module.exports = function(controller) {
                 payload: idx
               }))
             }, function(response, convo) {
-              if (reponse.quick_reply) {
+              if (response.quick_reply) {
                 let newItem = Object.assign({}, item);
                 newItem.options = [item.options[response.quick_reply.payload]];
 
