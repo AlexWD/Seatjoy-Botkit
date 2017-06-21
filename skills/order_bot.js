@@ -12,7 +12,26 @@ const merchant = {
 
 const menuItems = [];
 
-module.exports = function (controller) {
+module.exports = function(controller) {
+  // configure persistent menu
+  controller.api.messenger_profile.menu([{
+    "locale": "default",
+    "call_to_actions": [{
+        "type": "postback",
+        "title": "Menu",
+        "payload": "MainMenu"
+      },{
+        type: "nested",
+        title: "More",
+        call_to_actions: [{
+          "title": "Locations",
+          "type": "postback",
+          "payload": "Locations"
+        }]
+      }
+    ]
+  }]);
+
   // Load POS API data for the bot
   request({
     url: `https://connect.squareup.com/v1/${merchant.merchant_id}/items`,
@@ -40,14 +59,14 @@ module.exports = function (controller) {
         });
 
         menuItems[cat][item.id] = {
-            id: item.id,
-            name: item.name,
-            title: '',
-            description: item.description,
-            image: item.master_image ? item.master_image.url : '',
-            price: item.variations[0].price_money ? item.variations[0].price_money.amount / 100 : 0,
-            taxes: 0,
-            options: variations
+          id: item.id,
+          name: item.name,
+          title: '',
+          description: item.description,
+          image: item.master_image ? item.master_image.url : '',
+          price: item.variations[0].price_money ? item.variations[0].price_money.amount / 100 : 0,
+          taxes: 0,
+          options: variations
         };
       });
 
@@ -72,18 +91,18 @@ module.exports = function (controller) {
         user.orderData = emptyOrder;
       }
 
-      controller.storage.users.save(user, function(err,saved) {
-          if (err) {
-            console.log('error saving user data: ' + err);
-          } else {
-            console.log('user data saved');
-          }
-        });
+      controller.storage.users.save(user, function(err, saved) {
+        if (err) {
+          console.log('error saving user data: ' + err);
+        } else {
+          console.log('user data saved');
+        }
+      });
     });
   }
 
   // facebook postback controller, this handles top level responses e.g. selecting menus/items
-  controller.on('facebook_postback', function (bot, message) {
+  controller.on('facebook_postback', function(bot, message) {
     let [action, ...details] = message.payload.split('/');
 
     console.log('payload:' + message.payload);
@@ -99,23 +118,23 @@ module.exports = function (controller) {
 
         // handle menu item options
         if (item.options.length > 1) {
-          bot.startConversation(message, function (err, convo) {
+          bot.startConversation(message, function(err, convo) {
             convo.ask({
-                "text": `Now, select your ${item.name}`,
-                "quick_replies": item.options.map((option, idx) => ({
-                    content_type: "text",
-                    "title": `${option.name} $${option.price}`,
-                    payload: idx
-                  }))
-              }, function (response, convo) {
-                if (reponse.quick_reply) {
-                  let newItem = Object.assign({}, item);
-                  newItem.options = [item.options[response.quick_reply.payload]];
+              "text": `Now, select your ${item.name}`,
+              "quick_replies": item.options.map((option, idx) => ({
+                content_type: "text",
+                "title": `${option.name} $${option.price}`,
+                payload: idx
+              }))
+            }, function(response, convo) {
+              if (reponse.quick_reply) {
+                let newItem = Object.assign({}, item);
+                newItem.options = [item.options[response.quick_reply.payload]];
 
-                  addItemToOrder(bot, message, newItem);
+                addItemToOrder(bot, message, newItem);
 
-                  convo.next();
-                }
+                convo.next();
+              }
             })
           });
         } else {
@@ -144,49 +163,48 @@ module.exports = function (controller) {
 
       let orderDetails = getOrderDetails(user.orderData);
 
-      bot.startConversation(message, function (err, convo) {
-       convo.say(orderDetails);
-       convo.ask({
-         "text":"Please Select:",
-         "quick_replies":[
-             {
-               "content_type":"text",
-               "title":"Confirm Order",
-               "payload": "Confirm"
-             },
-             {
-               "content_type":"text",
-               "title":"Add more items",
-               "payload": "AddMore"
-             },
-             {
-               "content_type": "text",
-               "title": "Cancel",
-               "payload": "Cancel"
-             }
-           ]
-         }, function (response, convo) {
-           // if the user responds with something other than a quick reply option
-           // response.text
-           if (response.quick_reply) {
-             switch (response.quick_reply.payload) {
-               case "Confirm":
-                 // display receipt card
-                 displayReceiptCard(bot, message, user.orderData);
-                 break;
-               case "AddMore":
-                 displayMainMenu(bot, message);
-                 break;
-               case "Cancel":
-                 resetOrder(message);
-                 bot.reply(message, "Order Canceled");
-                 displayMainMenu(bot, message);
-                 break;
-             }
-           }
-           convo.next();
-         });
-       });
+      bot.startConversation(message, function(err, convo) {
+        convo.say(orderDetails);
+        convo.ask({
+          "text": "Please Select:",
+          "quick_replies": [{
+              "content_type": "text",
+              "title": "Confirm Order",
+              "payload": "Confirm"
+            },
+            {
+              "content_type": "text",
+              "title": "Add more items",
+              "payload": "AddMore"
+            },
+            {
+              "content_type": "text",
+              "title": "Cancel",
+              "payload": "Cancel"
+            }
+          ]
+        }, function(response, convo) {
+          // if the user responds with something other than a quick reply option
+          // response.text
+          if (response.quick_reply) {
+            switch (response.quick_reply.payload) {
+              case "Confirm":
+                // display receipt card
+                displayReceiptCard(bot, message, user.orderData);
+                break;
+              case "AddMore":
+                displayMainMenu(bot, message);
+                break;
+              case "Cancel":
+                resetOrder(message);
+                bot.reply(message, "Order Canceled");
+                displayMainMenu(bot, message);
+                break;
+            }
+          }
+          convo.next();
+        });
+      });
     });
   }
 
@@ -194,17 +212,17 @@ module.exports = function (controller) {
     let msg = '';
     let totalPrice = 0;
     orderData.items.forEach(item => {
-        if (item.options.length > 0) {
-          item.options.forEach(option => {
-              msg += option.name + ' - $' + option.price + '\n\n';
-              //session.userData.orderDetails.totalPrice += option.price;
-              totalPrice += option.price;
-          });
-        } else {
-          msg += item.name + ' - $' + item.price + '\n\n';
-          totalPrice += item.price;
-          //session.userData.orderDetails.totalPrice += item.price;
-        }
+      if (item.options.length > 0) {
+        item.options.forEach(option => {
+          msg += option.name + ' - $' + option.price + '\n\n';
+          //session.userData.orderDetails.totalPrice += option.price;
+          totalPrice += option.price;
+        });
+      } else {
+        msg += item.name + ' - $' + item.price + '\n\n';
+        totalPrice += item.price;
+        //session.userData.orderDetails.totalPrice += item.price;
+      }
 
     });
 
@@ -221,20 +239,16 @@ module.exports = function (controller) {
     // add items to dialog
     for (let itemId in subMenu) {
       let item = subMenu[itemId];
-      elements.push(
-        {
-            "title": item.name + ' - $' + item.price + ' ' + item.title,
-            "image_url": item.image,
-            "subtitle": item.description,
-            "buttons": [
-              {
-                type: "postback",
-                title: "Select",
-                payload: `SelectItem/${menuCategory}/${item.id}`
-              }
-            ]
-        }
-      );
+      elements.push({
+        "title": item.name + ' - $' + item.price + ' ' + item.title,
+        "image_url": item.image,
+        "subtitle": item.description,
+        "buttons": [{
+          type: "postback",
+          title: "Select",
+          payload: `SelectItem/${menuCategory}/${item.id}`
+        }]
+      });
     };
 
     // add back button
@@ -250,8 +264,8 @@ module.exports = function (controller) {
 
     var attachment = {
       "type": "template",
-      "payload":{
-        "template_type":"generic",
+      "payload": {
+        "template_type": "generic",
         "elements": elements
       }
     };
@@ -271,43 +285,41 @@ module.exports = function (controller) {
 
     for (let i = 0; i < menuCategories.length / 3; i++) {
       elements.push({
-            "title":"Our Menu",
-            "image_url":"https://imagizer.imageshack.us/592x600f/923/yIDwcC.png",
-            "subtitle":"We are pleased to offer you a wide-range of menu for lunch or dinner",
-            "buttons":
-              menuCategories.slice(i * 3, i * 3 + 3).map((menuCategory => {
-                return {
-                  type: "postback",
-                  title: `${menuCategory} Menu`,
-                  payload: `Menu/${menuCategory}`
-                };
-              }))
-          });
+        "title": "Our Menu",
+        "image_url": "https://imagizer.imageshack.us/592x600f/923/yIDwcC.png",
+        "subtitle": "We are pleased to offer you a wide-range of menu for lunch or dinner",
+        "buttons": menuCategories.slice(i * 3, i * 3 + 3).map((menuCategory => {
+          return {
+            type: "postback",
+            title: `${menuCategory} Menu`,
+            payload: `Menu/${menuCategory}`
+          };
+        }))
+      });
     }
 
     // add hours and directions element
 
     elements.push({
-            "title":"Hours and Directions",
-            "image_url":"http://imagizer.imageshack.us/600x450f/924/og9BY2.jpg",
-            "buttons":[
-              {
-                "type": "postback",
-                "title": "Location and Hours",
-                "payload": "/locationsMenu"
-              },
-              {
-                "type": "web_url",
-                "title": "Contact",
-                "url": "http://www.phatthaisf.com/contact.html"
-              }
-            ]
-          });
+      "title": "Hours and Directions",
+      "image_url": "http://imagizer.imageshack.us/600x450f/924/og9BY2.jpg",
+      "buttons": [{
+          "type": "postback",
+          "title": "Location and Hours",
+          "payload": "/locationsMenu"
+        },
+        {
+          "type": "web_url",
+          "title": "Contact",
+          "url": "http://www.phatthaisf.com/contact.html"
+        }
+      ]
+    });
 
     var attachment = {
       "type": "template",
-      "payload":{
-        "template_type":"generic",
+      "payload": {
+        "template_type": "generic",
         "elements": elements
       }
     };
@@ -338,13 +350,13 @@ module.exports = function (controller) {
     });
 
     let receiptAttachment = {
-      "type":"template",
-      "payload":{
-        "template_type":"receipt",
-        "recipient_name":"Stephane Crozatier",
-        "order_number":"12345678902",
-        "currency":"USD",
-        "payment_method":"Visa 2345",
+      "type": "template",
+      "payload": {
+        "template_type": "receipt",
+        "recipient_name": "Stephane Crozatier",
+        "order_number": "12345678902",
+        "currency": "USD",
+        "payment_method": "Visa 2345",
         "elements": elements,
         // "address":{
         //   "street_1":"1 Hacker Way",
@@ -354,20 +366,19 @@ module.exports = function (controller) {
         //   "state":"CA",
         //   "country":"US"
         // },
-        "summary":{
+        "summary": {
           "subtotal": totalPrice,
           // "shipping_cost":4.95,
-          "total_tax":0,
+          "total_tax": 0,
           "total_cost": totalPrice
         },
-        "adjustments":[
-          {
-            "name":"New Customer Discount",
-            "amount":20
+        "adjustments": [{
+            "name": "New Customer Discount",
+            "amount": 20
           },
           {
-            "name":"$10 Off Coupon",
-            "amount":10
+            "name": "$10 Off Coupon",
+            "amount": 10
           }
         ]
       }
@@ -389,21 +400,19 @@ module.exports = function (controller) {
         let orderItems = orderDetails.items.map(item => item.name).join('|');
 
         let payAttachment = {
-          "type":"template",
-          "payload":{
-            "template_type":"button",
-            "text":"Click below to pay for your order",
-            "buttons":[
-              {
-                "type":"web_url",
-                "url": `https://seatjoy-mvp.herokuapp.com/payment/page?fb_first_name=${data.first_name}&fb_id=${message.user}&profile_pic=${data.profile_pic}&fb_last_name=${data.last_name}&merchant_id=${merchant.merchant_id}&location_id=${merchant.merchant_id}&items=${orderItems}&price=${totalPrice}`,
-                "title":"Pay"
-              }
-            ]
+          "type": "template",
+          "payload": {
+            "template_type": "button",
+            "text": "Click below to pay for your order",
+            "buttons": [{
+              "type": "web_url",
+              "url": `https://seatjoy-mvp.herokuapp.com/payment/page?fb_first_name=${data.first_name}&fb_id=${message.user}&profile_pic=${data.profile_pic}&fb_last_name=${data.last_name}&merchant_id=${merchant.merchant_id}&location_id=${merchant.merchant_id}&items=${orderItems}&price=${totalPrice}`,
+              "title": "Pay"
+            }]
           }
         };
 
-        bot.startConversation(message, function (err, convo) {
+        bot.startConversation(message, function(err, convo) {
           convo.say({
             attachment: receiptAttachment
           });
