@@ -55,7 +55,7 @@ module.exports = function (controller) {
   });
 
 
-  
+
   function resetOrder(message) {
     let emptyOrder = {
       totalPrice: 0,
@@ -71,7 +71,7 @@ module.exports = function (controller) {
       } else {
         user.orderData = emptyOrder;
       }
-      
+
       controller.storage.users.save(user, function(err,saved) {
           if (err) {
             console.log('error saving user data: ' + err);
@@ -81,13 +81,13 @@ module.exports = function (controller) {
         });
     });
   }
-  
+
   // facebook postback controller, this handles top level responses e.g. selecting menus/items
   controller.on('facebook_postback', function (bot, message) {
     let [action, ...details] = message.payload.split('/');
-    
+
     console.log('payload:' + message.payload);
-    
+
     switch (action) {
       case 'Menu':
         let [menuCategory] = details;
@@ -96,7 +96,7 @@ module.exports = function (controller) {
       case 'SelectItem':
         let [menuCat, itemId] = details;
         let item = menuItems[menuCat][itemId];
-        
+
         // handle menu item options
         if (item.options.length > 1) {
           bot.startConversation(message, function (err, convo) {
@@ -122,7 +122,7 @@ module.exports = function (controller) {
         break;
       case 'MainMenu':
         resetOrder(message);
-    
+
         // TODO: integrate messenger profile API to get name
         bot.reply(message, "Welcome to Seatjoy food service!");
 
@@ -132,7 +132,7 @@ module.exports = function (controller) {
         break;
     }
   });
-  
+
   function addItemToOrder(bot, message, item) {
     // add item to order details
     // display order details
@@ -164,26 +164,30 @@ module.exports = function (controller) {
              }
            ]
          }, function (response, convo) {
-           switch (response.quick_reply.payload) {
-             case "Confirm":
-               // display receipt card
-               displayReceiptCard(bot, message, user.orderData);
-               break;
-             case "AddMore":
-               displayMainMenu(bot, message);
-               break;
-             case "Cancel":
-               resetOrder(message);
-               bot.reply(message, "Order Canceled");
-               displayMainMenu(bot, message);
-               break;
+           // if the user responds with something other than a quick reply option
+           console.log(response);
+           if (response.quick_reply) {
+             switch (response.quick_reply.payload) {
+               case "Confirm":
+                 // display receipt card
+                 displayReceiptCard(bot, message, user.orderData);
+                 break;
+               case "AddMore":
+                 displayMainMenu(bot, message);
+                 break;
+               case "Cancel":
+                 resetOrder(message);
+                 bot.reply(message, "Order Canceled");
+                 displayMainMenu(bot, message);
+                 break;
+             }
            }
            convo.next();
          });
        });
     });
   }
-  
+
   function getOrderDetails(orderData) {
     let msg = '';
     let totalPrice = 0;
@@ -203,15 +207,15 @@ module.exports = function (controller) {
     });
 
     msg += '*Total - $' + totalPrice + '*';
-    
+
     return msg;
   }
-  
+
   function displayItems(bot, message, menuCategory) {
     let elements = [];
-    
+
     let subMenu = menuItems[menuCategory];
-    
+
     // add items to dialog
     for (let itemId in subMenu) {
       let item = subMenu[itemId];
@@ -230,7 +234,7 @@ module.exports = function (controller) {
         }
       );
     };
-    
+
     // add back button
     // elements.push({
     //   buttons: [
@@ -241,7 +245,7 @@ module.exports = function (controller) {
     //   }
     //   ]
     // })
-    
+
     var attachment = {
       "type": "template",
       "payload":{
@@ -249,20 +253,20 @@ module.exports = function (controller) {
         "elements": elements
       }
     };
-    
+
     bot.reply(message, {
       attachment: attachment
     });
   }
-  
+
   function displayMainMenu(bot, message) {
     let elements = [];
-    
+
     // each generic template supports a maximum of 3 buttons
     // For every 3 buttons we need a new generic template element
-    
+
     let menuCategories = Object.keys(menuItems);
-    
+
     for (let i = 0; i < menuCategories.length / 3; i++) {
       elements.push({
             "title":"Our Menu",
@@ -278,9 +282,9 @@ module.exports = function (controller) {
               }))
           });
     }
-    
+
     // add hours and directions element
-    
+
     elements.push({
             "title":"Hours and Directions",
             "image_url":"http://imagizer.imageshack.us/600x450f/924/og9BY2.jpg",
@@ -295,9 +299,9 @@ module.exports = function (controller) {
                 "title": "Contact",
                 "url": "http://www.phatthaisf.com/contact.html"
               }
-            ]      
+            ]
           });
-    
+
     var attachment = {
       "type": "template",
       "payload":{
@@ -305,22 +309,22 @@ module.exports = function (controller) {
         "elements": elements
       }
     };
-    
+
     bot.reply(message, {
       attachment: attachment
     });
   }
-  
+
   function displayReceiptCard(bot, message, orderDetails) {
     let elements = [];
     let totalPrice = 0;
     let totalTaxes = 0;
-    
+
     orderDetails.items.forEach(item => {
       // if an item has an option, that's the option selected
       let name = item.options.length ? item.options[0].name : item.name;
       let price = item.options.length ? item.options[0].price : item.price;
-      
+
       elements.push({
         title: name,
         price: price,
@@ -330,7 +334,7 @@ module.exports = function (controller) {
       });
       totalPrice += price;
     });
-    
+
     let receiptAttachment = {
       "type":"template",
       "payload":{
@@ -338,7 +342,7 @@ module.exports = function (controller) {
         "recipient_name":"Stephane Crozatier",
         "order_number":"12345678902",
         "currency":"USD",
-        "payment_method":"Visa 2345",        
+        "payment_method":"Visa 2345",
         "elements": elements,
         // "address":{
         //   "street_1":"1 Hacker Way",
@@ -366,11 +370,11 @@ module.exports = function (controller) {
         ]
       }
     };
-    
+
     // bot.reply(message, {
     //   attachment: attachment
     // });
-    
+
     // display pay button
     request({
       url: `https://graph.facebook.com/v2.6/${message.user}?fields=first_name,last_name,profile_pic,locale,timezone,gender&access_token=${process.env.page_token}`
@@ -379,9 +383,9 @@ module.exports = function (controller) {
         console.log(err);
       } else {
         let data = JSON.parse(body);
-        
+
         let orderItems = orderDetails.items.map(item => item.name).join('|');
-        
+
         let payAttachment = {
           "type":"template",
           "payload":{
@@ -396,7 +400,7 @@ module.exports = function (controller) {
             ]
           }
         };
-        
+
         bot.startConversation(message, function (err, convo) {
           convo.say({
             attachment: receiptAttachment
@@ -407,25 +411,25 @@ module.exports = function (controller) {
         }, function(response, convo) {
           convo.next();
         });
-        
+
         // bot.reply(message, {
         //   attachment: payAttachment
         // })
       }
     })
   }
-  
+
   controller.hears([/getstarted/i, /get started/i, /main menu/i], 'message_received', function(bot, message) {
     resetOrder(message);
-    
+
     console.log('get started called');
-    
+
     // TODO: integrate messenger profile API to get name
     bot.reply(message, "Welcome to Seatjoy food service!");
-    
+
     displayMainMenu(bot, message);
   });
-  
+
   // controller.hears('.*', 'message_received', function (bot, message) {
   //   bot.reply(message, "I'm sorry, I didn't understand that");
   // })
