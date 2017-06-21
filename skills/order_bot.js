@@ -108,12 +108,14 @@ module.exports = function (controller) {
                     payload: idx
                   }))
               }, function (response, convo) {
-                let newItem = Object.assign({}, item);
-                newItem.options = [item.options[response.quick_reply.payload]];
+                if (reponse.quick_reply) {
+                  let newItem = Object.assign({}, item);
+                  newItem.options = [item.options[response.quick_reply.payload]];
 
-                addItemToOrder(bot, message, newItem);
+                  addItemToOrder(bot, message, newItem);
 
-                convo.next();
+                  convo.next();
+                }
             })
           });
         } else {
@@ -165,7 +167,7 @@ module.exports = function (controller) {
            ]
          }, function (response, convo) {
            // if the user responds with something other than a quick reply option
-           console.log(response);
+           // response.text
            if (response.quick_reply) {
              switch (response.quick_reply.payload) {
                case "Confirm":
