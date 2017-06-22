@@ -282,7 +282,20 @@ module.exports = function(controller) {
 
     let menuCategories = Object.keys(menuItems);
 
-    menuCategories.sort((a, b) => Object.keys(menuItems[b]).length - Object.keys(menuItems[a]).length);
+    // sort categories based on average price of items
+    menuCategories.sort((a, b) => {
+    	let aAvg = Object.keys(menuItems[a]).reduce((c, d) => c + menuItems[a][d].price, 0) / Object.keys(menuItems[a]).length;
+    	let bAvg = Object.keys(menuItems[b]).reduce((c, d) => c + menuItems[b][d].price, 0) / Object.keys(menuItems[b]).length;
+
+    	return bAvg - aAvg;
+    });
+
+    // always put the other category at the end
+    let otherIndex = menuCategories.indexOf("other");
+    if (otherIndex !== -1) {
+      menuCategories.splice(menuCategories, 1);
+      menuCategories.push("other");
+    }
 
     for (let i = 0; i < menuCategories.length / 3; i++) {
       elements.push({
