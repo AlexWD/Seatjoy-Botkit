@@ -50,7 +50,6 @@ module.exports = function(controller) {
           menuItems[cat] = [];
         }
 
-
         let variations = item.variations.length < 2 ? [] : item.variations.map(variation => {
           return {
             name: variation.name,
@@ -179,8 +178,8 @@ module.exports = function(controller) {
             },
             {
               "content_type": "text",
-              "title": "Cancel",
-              "payload": "Cancel"
+              "title": "Restart Order",
+              "payload": "Restart"
             }
           ]
         }, function(response, convo) {
@@ -195,7 +194,7 @@ module.exports = function(controller) {
               case "AddMore":
                 displayMainMenu(bot, message);
                 break;
-              case "Cancel":
+              case "Restart":
                 resetOrder(message);
                 bot.reply(message, "Order Canceled");
                 displayMainMenu(bot, message);
@@ -282,6 +281,8 @@ module.exports = function(controller) {
     // For every 3 buttons we need a new generic template element
 
     let menuCategories = Object.keys(menuItems);
+
+    menuCategories.sort((a, b) => menuItems[b].length - menuItems[a].length);
 
     for (let i = 0; i < menuCategories.length / 3; i++) {
       elements.push({
