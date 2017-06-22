@@ -282,7 +282,7 @@ module.exports = function(controller) {
 
     let menuCategories = Object.keys(menuItems);
 
-    menuCategories.sort((a, b) => menuItems[b].length - menuItems[a].length);
+    menuCategories.sort((a, b) => Object.keys(menuItems[b]).length - Object.keys(menuItems[a]).length);
 
     for (let i = 0; i < menuCategories.length / 3; i++) {
       elements.push({
