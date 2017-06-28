@@ -1,9 +1,10 @@
 var debug = require('debug')('botkit:incoming_webhooks');
 
-module.exports = function(webserver, controller) {
+module.exports = function(webserver, controllers) {
 
     debug('Configured POST /facebook/receive url for receiving events');
-    webserver.post('/facebook/receive', function(req, res) {
+    webserver.post('/facebook/:botid', function(req, res) {
+        let botid = req.params.botid;
 
         // NOTE: we should enforce the token check here
 
@@ -11,17 +12,21 @@ module.exports = function(webserver, controller) {
         res.status(200);
         res.send('ok');
 
-        var bot = controller.spawn({});
+        let controller = controllers[botid];
 
-        // Now, pass the webhook into be processed
-        controller.handleWebhookPayload(req, res, bot);
+        if (controller) {
+          var bot = controller.spawn({});
 
+          // Now, pass the webhook into be processed
+          controller.handleWebhookPayload(req, res, bot);
+        }
     });
 
     debug('Configured GET /facebook/receive url for verification');
-    webserver.get('/facebook/receive', function(req, res) {
+    webserver.get('/facebook/:botid', function(req, res) {
+        let botid = req.params.botid;
         if (req.query['hub.mode'] == 'subscribe') {
-            if (req.query['hub.verify_token'] == controller.config.verify_token) {
+            if (req.query['hub.verify_token'] == controllers[botid].config.verify_token) {
                 res.send(req.query['hub.challenge']);
             } else {
                 res.send('OK');
